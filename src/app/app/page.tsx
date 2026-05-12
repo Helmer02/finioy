@@ -2625,7 +2625,7 @@ export default function AppWorkspace() {
       {/* 1. NEW TRANSACTION FORM MODAL */}
       {isTxModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-lg glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left">
+          <div className="w-full max-w-lg glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-base text-white">{editingId ? "Editar Lançamento" : "Lançar Nova Transação"}</h3>
               <button 
@@ -2827,7 +2827,7 @@ export default function AppWorkspace() {
       {/* 2. CREATE CUSTOM CATEGORY MODAL */}
       {isCatModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left">
+          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-base text-white">Criar Categoria Personalizada</h3>
               <button 
@@ -2899,7 +2899,7 @@ export default function AppWorkspace() {
       {/* 3. CADASTRAR CARTÃO MODAL */}
       {isCardModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left">
+          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-base text-white">{editingId ? "Editar Cartão de Crédito" : "Cadastrar Cartão de Crédito"}</h3>
               <button 
@@ -3005,7 +3005,7 @@ export default function AppWorkspace() {
       {/* 4. ADICIONAR COMPRA PARCELADA CARTÃO MODAL */}
       {isPurchaseModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left">
+          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-base text-white">Lançar Compra no Cartão</h3>
               <button 
@@ -3088,7 +3088,7 @@ export default function AppWorkspace() {
       {/* 5. NOVO EMPRÉSTIMO MODAL */}
       {isLoanModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left">
+          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-base text-white">{editingId ? "Editar Empréstimo" : "Adicionar Empréstimo Ativo"}</h3>
               <button 
@@ -3176,7 +3176,7 @@ export default function AppWorkspace() {
       {/* 6. NOVA ROTINA MODAL */}
       {isRoutineModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left">
+          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-base text-white">{editingId ? "Editar Compromisso de Rotina" : "Criar Compromisso de Rotina"}</h3>
               <button 
@@ -3265,7 +3265,7 @@ export default function AppWorkspace() {
       {/* 7. NOVA META MODAL */}
       {isGoalModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left">
+          <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-base text-white">{editingId ? "Editar Meta Financeira" : "Criar Nova Meta Financeira"}</h3>
               <button 
@@ -3343,7 +3343,7 @@ export default function AppWorkspace() {
     {/* 8. NOVA/EDITAR CONTA BANCÁRIA MODAL */}
     {isAccountModalOpen && (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-        <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left">
+        <div className="w-full max-w-sm glass-panel rounded-2xl border border-white/5 p-6 animate-scale-in text-left max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-bold text-base text-white">{editingId ? "Editar Conta Bancária" : "Cadastrar Conta Bancária"}</h3>
             <button 
