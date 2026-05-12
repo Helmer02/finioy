@@ -188,3 +188,23 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* --- MOBILE LAYOUT LOCKS & ZOOM PREVENTION --- */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  /* Prevent automatic iOS/Android browser zoom on input focus */
+  input, select, textarea, .form-input {
+    font-size: 16px !important;
+  }
+  
+  /* Prevent padding leaks on standard cards */
+  .glass-panel {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+}
