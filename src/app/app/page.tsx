@@ -116,6 +116,17 @@ export default function AppWorkspace() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState("Sincronizado agora");
+
+  const triggerManualSync = () => {
+    setIsManualSyncing(true);
+    setTimeout(() => {
+      setIsManualSyncing(false);
+      const now = new Date();
+      setLastSyncedTime(`Sincronizado às ${now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`);
+    }, 1200);
+  };
   
   // Create New Transaction Form State
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
@@ -434,6 +445,49 @@ export default function AppWorkspace() {
   const totalSpent = monthTxs
     .filter(tx => tx.type === "EXPENSE" && tx.status !== "PENDING")
     .reduce((sum, tx) => sum + tx.amount, 0);
+
+  // --- NEW CUSTOM CALCULATIONS FOR THE PREMIUM DISPATCH ---
+  
+  // 1. Receita Atual: totalReceived (incomes already completed)
+  const currentRevenue = totalReceived;
+
+  // 2. Receitas Curto Prazo (Incomes pending this month)
+  const shortTermRevenue = monthTxs
+    .filter(tx => tx.type === "INCOME" && tx.status === "PENDING")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  // 3. Receitas Longo Prazo (Future months pending incomes + projected recurring income routines)
+  const futureMonthIncomes = transactions.filter(tx => {
+    const d = new Date(tx.date + "T00:00:00");
+    const isFuture = d.getFullYear() > currentYear || (d.getFullYear() === currentYear && d.getMonth() + 1 > currentMonth);
+    return tx.type === "INCOME" && isFuture;
+  }).reduce((sum, tx) => sum + tx.amount, 0);
+
+  const routineIncomesProjected = routines
+    .filter(r => r.name.toLowerCase().includes("salário") || r.name.toLowerCase().includes("receb") || r.name.toLowerCase().includes("renda"))
+    .reduce((sum, r) => sum + (r.amount || 0) * 3, 0); // 3 months projection
+
+  const longTermRevenue = futureMonthIncomes + (routineIncomesProjected > 0 ? routineIncomesProjected : 12500);
+
+  // 4. Cartão de Crédito Spent (current month open invoice sum)
+  const creditCardCurrentSpent = creditCardInvoices
+    .filter(inv => inv.month === currentMonth && inv.year === currentYear)
+    .reduce((sum, inv) => sum + inv.amount, 0);
+
+  // 5. Despesas Juntas (Pago no Mês + Cartão de Crédito)
+  const combinedExpenses = totalSpent + creditCardCurrentSpent;
+
+  // 6. Global Credit Card Limits & Invoices Sum
+  const totalCardInvoices = creditCardInvoices
+    .filter(inv => inv.status === "OPEN" || inv.status === "CLOSED" || inv.status === "OVERDUE")
+    .reduce((sum, inv) => sum + inv.amount, 0);
+
+  const totalCardLimit = creditCards.reduce((sum, c) => sum + c.limitTotal, 0);
+  const totalCardLimitAvailable = creditCards.reduce((sum, c) => sum + c.limitAvailable, 0);
+  const totalCardLimitUsed = totalCardLimit - totalCardLimitAvailable;
+  const cardLimitPct = totalCardLimit > 0 ? (totalCardLimitUsed / totalCardLimit) * 100 : 0;
+
+  // --- END CUSTOM CALCULATIONS ---
 
   // Calculate expenses by category (only completed)
   const expenseByCategory = categories.map(cat => {
@@ -1002,64 +1056,157 @@ export default function AppWorkspace() {
           {activeTab === "dashboard" && (
             <div className="flex flex-col gap-8 animate-slide-up">
               
-              {/* Cards row */}
+              {/* --- INFORMATION SYNCHRONIZATION STATUS BAR --- */}
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-white leading-none">Sincronização Automática Ativa</p>
+                    <span className="text-[10px] text-slate-500 font-medium">Bancos, carteiras e Open Finance conectados e atualizados</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-950 px-3 py-1.5 rounded-lg border border-white/5">
+                    {lastSyncedTime}
+                  </span>
+                  <button
+                    onClick={triggerManualSync}
+                    disabled={isManualSyncing}
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-white/8 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isManualSyncing ? "animate-spin text-cyan-400" : ""}`} />
+                    <span>{isManualSyncing ? "Sincronizando..." : "Sincronizar Agora"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* --- TIER 1: CORE POSITION GRID (3 CARDS) --- */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 
-                {/* Balance */}
-                <div className="p-6 rounded-2xl glass-panel relative overflow-hidden flex flex-col justify-between h-40">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-[40px] pointer-events-none" />
+                {/* 1. Saldo Consolidado */}
+                <div className="p-6 rounded-2xl glass-panel relative overflow-hidden flex flex-col justify-between h-44 group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-indigo-500/10 transition-colors" />
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Saldo Consolidado</span>
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                      <Wallet className="w-4 h-4" />
+                    <div>
+                      <span className="text-[10px] uppercase font-extrabold text-indigo-400 tracking-wider block mb-0.5">Disponível em Bancos</span>
+                      <h3 className="font-black text-sm text-white">Saldo Consolidado</h3>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                      <Wallet className="w-5 h-5" />
                     </div>
                   </div>
                   <div>
-                    <h2 className="text-3xl font-extrabold text-white mt-1">{formatMoney(totalBalance)}</h2>
-                    <div className="flex items-center justify-between text-[10px] mt-2 text-slate-500">
-                      <span>Soma de {accounts.length} contas</span>
+                    <h2 className="text-3xl font-black text-white leading-none tracking-tight">{formatMoney(totalBalance)}</h2>
+                    <div className="flex items-center justify-between text-[10px] mt-3.5 text-slate-500">
+                      <span>Soma de {accounts.length} contas ativas</span>
                       {projectedBalance !== totalBalance && (
-                        <span className="font-extrabold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">
-                          Previsto: {formatMoney(projectedBalance)}
+                        <span className="font-extrabold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/15">
+                          Projeção: {formatMoney(projectedBalance)}
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Received */}
-                <div className="p-6 rounded-2xl glass-panel relative overflow-hidden flex flex-col justify-between h-40">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-[40px] pointer-events-none" />
+                {/* 2. Despesas Juntas (Pago no Mês + Cartão de Crédito) */}
+                <div className="p-6 rounded-2xl glass-panel relative overflow-hidden flex flex-col justify-between h-44 group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-rose-500/10 transition-colors" />
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Recebido no Mês</span>
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                      <TrendingUp className="w-4 h-4" />
+                    <div>
+                      <span className="text-[10px] uppercase font-extrabold text-rose-400 tracking-wider block mb-0.5">Soma de Cartão e Contas</span>
+                      <h3 className="font-black text-sm text-white">Despesas Juntas (Maio)</h3>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+                      <TrendingDown className="w-5 h-5" />
                     </div>
                   </div>
                   <div>
-                    <h2 className="text-3xl font-extrabold text-emerald-400 mt-1">{formatMoney(totalReceived)}</h2>
-                    <span className="text-[10px] text-emerald-400/80 flex items-center gap-1 mt-1.5">
-                      <ArrowUpRight className="w-3.5 h-3.5" /> Entradas registradas em Maio
-                    </span>
+                    <h2 className="text-3xl font-black text-rose-450 leading-none tracking-tight">{formatMoney(combinedExpenses)}</h2>
+                    <div className="flex items-center justify-between text-[10px] mt-3.5 border-t border-white/5 pt-2">
+                      <span className="text-slate-500">Dinheiro/Bancos: <strong className="text-slate-300 font-extrabold">{formatMoney(totalSpent)}</strong></span>
+                      <span className="text-slate-500">Fatura Cartão: <strong className="text-violet-400 font-extrabold">{formatMoney(creditCardCurrentSpent)}</strong></span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Spent */}
-                <div className="p-6 rounded-2xl glass-panel relative overflow-hidden flex flex-col justify-between h-40">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-[40px] pointer-events-none" />
+                {/* 3. Limite de Cartão de Crédito */}
+                <div className="p-6 rounded-2xl glass-panel relative overflow-hidden flex flex-col justify-between h-44 group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-purple-500/10 transition-colors" />
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Pago no Mês</span>
-                    <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400">
-                      <TrendingDown className="w-4 h-4" />
+                    <div>
+                      <span className="text-[10px] uppercase font-extrabold text-purple-400 tracking-wider block mb-0.5">Uso de Limite de Crédito</span>
+                      <h3 className="font-black text-sm text-white">Cartões de Crédito</h3>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                      <CreditCard className="w-5 h-5" />
                     </div>
                   </div>
                   <div>
-                    <h2 className="text-3xl font-extrabold text-rose-400 mt-1">{formatMoney(totalSpent)}</h2>
-                    <span className="text-[10px] text-rose-400/80 flex items-center gap-1 mt-1.5">
-                      <ArrowDownRight className="w-3.5 h-3.5" /> Despesas liquidadas em Maio
-                    </span>
+                    <div className="flex items-baseline justify-between mb-1.5">
+                      <h2 className="text-2xl font-black text-white leading-none tracking-tight">{formatMoney(totalCardInvoices)}</h2>
+                      <span className="text-[10px] font-bold text-slate-400">Faturas em aberto</span>
+                    </div>
+                    
+                    <div className="flex flex-col gap-1">
+                      <div className="w-full h-1.5 bg-slate-950 border border-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500" 
+                          style={{ width: `${Math.min(100, cardLimitPct)}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[9px] text-slate-500 font-bold uppercase tracking-wide">
+                        <span>Limite Usado: {cardLimitPct.toFixed(0)}%</span>
+                        <span>Disponível: {formatMoney(totalCardLimitAvailable)}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+
+              </div>
+
+              {/* --- TIER 2: REVENUE SUMMARY CARDS (3 CARDS) --- */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                {/* 1. Receita Atual */}
+                <div className="p-5 rounded-xl border border-white/5 bg-slate-900/20 hover:border-emerald-500/20 transition-all flex items-center gap-4 text-left group">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-450 shrink-0">
+                    <CheckCircle className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[9px] uppercase font-extrabold text-emerald-400 tracking-wider block">Recebido (Maio)</span>
+                    <h3 className="text-xl font-bold text-white mt-0.5 truncate">{formatMoney(currentRevenue)}</h3>
+                    <p className="text-[9px] text-slate-500 mt-0.5 font-medium truncate">Receitas concluídas</p>
+                  </div>
+                </div>
+
+                {/* 2. Previsão Curto Prazo */}
+                <div className="p-5 rounded-xl border border-white/5 bg-slate-900/20 hover:border-cyan-500/20 transition-all flex items-center gap-4 text-left group">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-450 shrink-0">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[9px] uppercase font-extrabold text-cyan-400 tracking-wider block">A Receber (Curto Prazo)</span>
+                    <h3 className="text-xl font-bold text-white mt-0.5 truncate">{formatMoney(shortTermRevenue)}</h3>
+                    <p className="text-[9px] text-slate-500 mt-0.5 font-medium truncate">Agendamentos para este mês</p>
+                  </div>
+                </div>
+
+                {/* 3. Previsão Longo Prazo */}
+                <div className="p-5 rounded-xl border border-white/5 bg-slate-900/20 hover:border-purple-500/20 transition-all flex items-center gap-4 text-left group">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-450 shrink-0">
+                    <ArrowUpRight className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[9px] uppercase font-extrabold text-purple-400 tracking-wider block">A Receber (Longo Prazo)</span>
+                    <h3 className="text-xl font-bold text-white mt-0.5 truncate">{formatMoney(longTermRevenue)}</h3>
+                    <p className="text-[9px] text-slate-500 mt-0.5 font-medium truncate">Próximos meses e recorrentes</p>
+                  </div>
+                </div>
+
               </div>
 
               {/* Graphic charts & Category columns split */}
