@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                     String                  @id @default(uuid())
+  name                   String
+  email                  String                  @unique
+  passwordHash           String?
+  cpf                    String                  @unique
+  phone                  String?
+  createdAt              String
+  updatedAt              String
+  isPremium              Boolean                 @default(false)
+  lgpdConsent            Boolean                 @default(false)
+  lgpdConsentDate        String?
+  accounts               Account[]
+  categories             Category[]
+  creditCards            CreditCard[]
+  goals                  Goal[]
+  loans                  Loan[]
+  notifications          Notification[]
+  openFinanceConnections OpenFinanceConnection[]
+  routines               Routine[]
+  subscriptions          Subscription[]
+  transactions           Transaction[]
+}
+
+model Account {
+  id           String        @id @default(uuid())
+  userId       String
+  name         String
+  bank         String
+  balance      Float         @default(0.0)
+  color        String
+  createdAt    String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  transactions Transaction[]
+}
+
+model Category {
+  id           String        @id @default(uuid())
+  userId       String
+  name         String
+  color        String
+  icon         String
+  isCustom     Boolean       @default(false)
+  createdAt    String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  transactions Transaction[]
+}
+
+model Transaction {
+  id            String   @id @default(uuid())
+  userId        String
+  accountId     String?
+  categoryId    String
+  description   String
+  amount        Float
+  type          String
+  date          String
+  paymentMethod String
+  isRecurring   Boolean  @default(false)
+  recurrence    String?
+  receiptUrl    String?
+  notes         String?
+  createdAt     String
+  account       Account? @relation(fields: [accountId], references: [id], onUpdate: NoAction)
+  category      Category @relation(fields: [categoryId], references: [id], onUpdate: NoAction)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model CreditCard {
+  id             String               @id @default(uuid())
+  userId         String
+  name           String
+  bank           String
+  limitTotal     Float
+  limitAvailable Float
+  closingDay     Int
+  dueDay         Int
+  color          String
+  createdAt      String
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  invoices       CreditCardInvoice[]
+  purchases      CreditCardPurchase[]
+}
+
+model CreditCardInvoice {
+  id        String               @id @default(uuid())
+  cardId    String
+  month     Int
+  year      Int
+  amount    Float                @default(0.0)
+  status    String
+  dueDate   String
+  createdAt String
+  card      CreditCard           @relation(fields: [cardId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  purchases CreditCardPurchase[]
+}
+
+model CreditCardPurchase {
+  id                 String             @id @default(uuid())
+  cardId             String
+  invoiceId          String?
+  description        String
+  amount             Float
+  date               String
+  installments       Int                @default(1)
+  currentInstallment Int                @default(1)
+  createdAt          String
+  card               CreditCard         @relation(fields: [cardId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  invoice            CreditCardInvoice? @relation(fields: [invoiceId], references: [id], onUpdate: NoAction)
+}
+
+model Loan {
+  id              String            @id @default(uuid())
+  userId          String
+  name            String
+  amountTotal     Float
+  installments    Int
+  installmentVal  Float
+  interestRate    Float?
+  startDate       String
+  status          String
+  createdAt       String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  installmentList LoanInstallment[]
+}
+
+model LoanInstallment {
+  id       String  @id @default(uuid())
+  loanId   String
+  number   Int
+  amount   Float
+  dueDate  String
+  status   String
+  paidDate String?
+  loan     Loan    @relation(fields: [loanId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model Routine {
+  id          String  @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  frequency   String
+  time        String?
+  priority    String
+  notify      Boolean @default(true)
+  status      String
+  amount      Float?
+  dueDate     String?
+  createdAt   String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model Goal {
+  id         String @id @default(uuid())
+  userId     String
+  name       String
+  targetVal  Float
+  currentVal Float  @default(0.0)
+  deadline   String
+  category   String
+  createdAt  String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model Notification {
+  id        String  @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  isRead    Boolean @default(false)
+  createdAt String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model Subscription {
+  id        String @id @default(uuid())
+  userId    String
+  planType  String
+  status    String
+  amount    Float
+  startDate String
+  endDate   String
+  createdAt String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model OpenFinanceConnection {
+  id          String @id @default(uuid())
+  userId      String
+  institution String
+  status      String
+  lastSynced  String
+  consentId   String
+  createdAt   String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
